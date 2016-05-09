@@ -1,118 +1,67 @@
-#include <stdint.h>
 #include <avr/io.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stddef.h>
+#include <stdarg.h>
+#include "uart.h"
 
-static inline void set_baud_rate(long baud)
+static FILE g_uart_stream = {0};
+
+static int uart_getc( FILE* stream )
 {
-#ifndef CLK_PRESCAL
-#define CLK_PRESCAL (1UL)
-#endif
-
-  uint16_t x = ((F_CPU / (16UL * CLK_PRESCAL) + baud / 2) / baud - 1);
-  UBRR0H = x >> 8;
-  UBRR0L = x;
-}
-
-static void uart_setup(void)
-{
-#if (CLK_PRESCAL == 1UL)
-  set_baud_rate(9600);
-#else
-  set_baud_rate(300);
-#endif
-
-  /* baud doubler off  - Only needed on Uno XXX */
-  UCSR0A &= ~(1 << U2X0);
-
-  UCSR0B = (1 << RXEN0) | (1 << TXEN0);
-
-  /* default to 8n1 framing */
-  UCSR0C = (3 << 1);
-}
-
-static void uart_write(const uint8_t* s, uint8_t n)
-{
-  for (; n; --n, ++s)
-  {
-    /* wait for transmit buffer to be empty */
-    while (!(UCSR0A & (1 << UDRE0))) ;
-    UDR0 = *s;
-  }
-
-  /* wait for last byte to be sent */
-  while ((UCSR0A & (1 << TXC0)) == 0) ;
-}
-
-static uint8_t uart_read_uint8(uint8_t* x)
-{
-  /* return non zero on error */
-
-  uint8_t err = 0;
-
-  while ((UCSR0A & (1 << RXC0)) == 0) ;
-
-  if (UCSR0A & ((1 << FE0) | (1 << DOR0) | (1 << UPE0)))
-  {
-    /* clear errors by reading URD0 */
-    err = 1;
-  }
-
-  *x = UDR0;
-
-  return err;
-}
-
-static void uart_flush_rx(void)
-{
-  volatile uint8_t x;
-
-  while (UCSR0A & (1 << RXC0))
-  {
-    x = UDR0;
-    __asm__ __volatile__ ("nop" ::"m"(x));
-  }
-}
-
-static inline uint8_t nibble(uint32_t x, uint8_t i)
-{
-  return (x >> (i * 4)) & 0xf;
-}
-
-static inline uint8_t hex(uint8_t x)
-{
-  return (x >= 0xa) ? 'a' + x - 0xa : '0' + x;
+    while ( (UCSR0A & _BV(RXC0)) == 0 ); /* wait for a character to be received */
+    return UDR0;
 }
 
 
-static uint8_t hex_buf[8];
-
-static uint8_t* uint8_to_string(uint8_t x)
+static int uart_putc( char c, FILE* stream )
 {
-  hex_buf[1] = hex(nibble(x, 0));
-  hex_buf[0] = hex(nibble(x, 1));
-
-  return hex_buf;
+    while ( (UCSR0A & _BV(UDRE0)) == 0 ); /* wait for the TX buffer to be ready */
+    UDR0 = c; /* put char into TX buffer */
+    return 0;
 }
 
-static uint8_t* uint16_to_string(uint16_t x)
+void uart_init( uint32_t baud )
 {
-  hex_buf[3] = hex(nibble(x, 0));
-  hex_buf[2] = hex(nibble(x, 1));
-  hex_buf[1] = hex(nibble(x, 2));
-  hex_buf[0] = hex(nibble(x, 3));
+    /* See table 20-1 for baud rate calculations */
+    uint16_t ubrr = (F_CPU / (16*baud)) - 1;
 
-  return hex_buf;
+    UBRR0H = (uint8_t)(ubrr >> 8);
+    UBRR0L = (uint8_t)ubrr;
+
+    /* Disable 2x TX speed */
+    UCSR0A &= ~_BV(U2X0);
+
+    /* Enable RX and TX */
+    UCSR0B = _BV(RXEN0) | _BV(TXEN0);
+
+    /* Set 8-N-1 frame */
+    UCSR0C = (3 << UCSZ00);
+
+    /* Setup stdio */
+    fdev_setup_stream( &g_uart_stream, uart_putc, uart_getc, _FDEV_SETUP_RW );
+    stdin  = &g_uart_stream;
+    stdout = &g_uart_stream;
+    stderr = &g_uart_stream;
 }
 
-static uint8_t* uint32_to_string(uint32_t x)
+int uart_println(const char *format, ...)
 {
-  hex_buf[7] = hex(nibble(x, 0));
-  hex_buf[6] = hex(nibble(x, 1));
-  hex_buf[5] = hex(nibble(x, 2));
-  hex_buf[4] = hex(nibble(x, 3));
-  hex_buf[3] = hex(nibble(x, 4));
-  hex_buf[2] = hex(nibble(x, 5));
-  hex_buf[1] = hex(nibble(x, 6));
-  hex_buf[0] = hex(nibble(x, 7));
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    fputs("\r\n", stdout);
+    va_end(args);
+    return 0;
+}
 
-  return hex_buf;
+int uart_printf(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    //fputs("\r\n", stdout);
+    va_end(args);
+    return 0;
 }

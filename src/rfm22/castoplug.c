@@ -22,22 +22,22 @@
 
 #define SOFTSPI_MODE_0
 
-#define SOFTSPI_CLK_DDR DDRC
-#define SOFTSPI_CLK_PORT PORTC
-#define SOFTSPI_CLK_MASK (1 << 1)
-#define SOFTSPI_MOSI_DDR DDRC
-#define SOFTSPI_MOSI_PORT PORTC
-#define SOFTSPI_MOSI_MASK (1 << 2)
-#define SOFTSPI_MISO_DDR DDRC
-#define SOFTSPI_MISO_PIN PINC
-#define SOFTSPI_MISO_PORT PORTC
-#define SOFTSPI_MISO_MASK (1 << 3)
+#define SOFTSPI_CLK_DDR DDRB
+#define SOFTSPI_CLK_PORT PORTB
+#define SOFTSPI_CLK_MASK _BV(5)
+#define SOFTSPI_MOSI_DDR DDRB
+#define SOFTSPI_MOSI_PORT PORTB
+#define SOFTSPI_MOSI_MASK _BV(3)
+#define SOFTSPI_MISO_DDR DDRB
+#define SOFTSPI_MISO_PIN PINB
+#define SOFTSPI_MISO_PORT PORTB
+#define SOFTSPI_MISO_MASK _BV(4)
 
 #include "./softspi.c"
 
-#define RFM22_IO_CSN_DDR DDRC
-#define RFM22_IO_CSN_PORT PORTC
-#define RFM22_IO_CSN_MASK (1 << 0)
+#define RFM22_IO_CSN_DDR DDRB
+#define RFM22_IO_CSN_PORT PORTB
+#define RFM22_IO_CSN_MASK _BV(2) 
 
 #if 0 /* unused */
 #define RFM22_IO_SDN_MASK (1 << 4)
@@ -383,12 +383,12 @@ do {						\
 
 static inline void castoplug_send_pulse_a(void)
 {
-  castoplug_send_pulse(400, 940);
+  castoplug_send_pulse(220, 480);
 }
 
 static inline void castoplug_send_pulse_b(void)
 {
-  castoplug_send_pulse(1005, 340);
+  castoplug_send_pulse(580, 130);
 }
 
 static inline void castoplug_send_group_a(void)
@@ -396,9 +396,9 @@ static inline void castoplug_send_group_a(void)
   castoplug_send_pulse_a();
   castoplug_send_pulse_a();
   castoplug_send_pulse_a();
-  castoplug_send_pulse_b();
   castoplug_send_pulse_a();
-  castoplug_send_pulse_b();
+  castoplug_send_pulse_a();
+  castoplug_send_pulse_a();
   castoplug_send_pulse_a();
   castoplug_send_pulse_b();
 }
@@ -408,7 +408,7 @@ static inline void castoplug_send_group_b(void)
   castoplug_send_pulse_a();
   castoplug_send_pulse_b();
   castoplug_send_pulse_a();
-  castoplug_send_pulse_a();
+  castoplug_send_pulse_b();
   castoplug_send_pulse_a();
   castoplug_send_pulse_b();
   castoplug_send_pulse_a();
@@ -442,14 +442,13 @@ static inline void castoplug_send_group_d(void)
 static inline void castoplug_send_dev_1(void)
 {
   castoplug_send_pulse_a();
-  castoplug_send_pulse_a();
-  castoplug_send_pulse_a();
   castoplug_send_pulse_b();
   castoplug_send_pulse_a();
   castoplug_send_pulse_b();
   castoplug_send_pulse_a();
   castoplug_send_pulse_b();
   castoplug_send_pulse_a();
+  castoplug_send_pulse_b();
 }
 
 static inline void castoplug_send_dev_2(void)
@@ -472,33 +471,34 @@ static inline void castoplug_send_dev_3(void)
   castoplug_send_pulse_a();
   castoplug_send_pulse_b();
   castoplug_send_pulse_a();
+  castoplug_send_pulse_b();
+  castoplug_send_pulse_a();
+  castoplug_send_pulse_b();
+}
+
+static inline void castoplug_send_cmd_off(void)
+{
   castoplug_send_pulse_a();
   castoplug_send_pulse_a();
   castoplug_send_pulse_b();
+  castoplug_send_pulse_b();
+  castoplug_send_pulse_b();
+  castoplug_send_pulse_b();
+  castoplug_send_pulse_a();
+  castoplug_send_pulse_a();
   castoplug_send_pulse_a();
 }
 
 static inline void castoplug_send_cmd_on(void)
 {
-  castoplug_send_pulse_b();
   castoplug_send_pulse_a();
-  castoplug_send_pulse_b();
   castoplug_send_pulse_a();
-  castoplug_send_pulse_b();
   castoplug_send_pulse_b();
   castoplug_send_pulse_b();
   castoplug_send_pulse_a();
-}
-
-static inline void castoplug_send_cmd_off(void)
-{
-  castoplug_send_pulse_b();
   castoplug_send_pulse_a();
   castoplug_send_pulse_b();
-  castoplug_send_pulse_a();
   castoplug_send_pulse_b();
-  castoplug_send_pulse_a();
-  castoplug_send_pulse_a();
   castoplug_send_pulse_a();
 }
 
